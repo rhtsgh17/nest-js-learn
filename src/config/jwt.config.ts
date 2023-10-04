@@ -1,4 +1,5 @@
 export const jwt_config = {
-  secret: 'belajar_jwt',
+  access_token_secret: 'belajar_jwt',
   expired: 3600,
+  refresh_token_secret: 'fajfngjgan',
 };

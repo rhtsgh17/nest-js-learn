@@ -1,4 +1,9 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { compare, hash } from 'bcrypt';
@@ -19,9 +24,13 @@ export class AuthService extends BaseResponse {
     super();
   }
 
-  private generateJWT(payload: jwtPayload, expiresIn: string | number) {
+  private generateJWT(
+    payload: jwtPayload,
+    expiresIn: string | number,
+    secret: string,
+  ) {
     return this.jwtService.sign(payload, {
-      secret: jwt_config.secret,
+      secret: secret,
       expiresIn: expiresIn,
     });
   }
@@ -80,8 +89,16 @@ export class AuthService extends BaseResponse {
         avatar: checkUserExists.avatar,
       };
 
-      const access_token = await this.generateJWT(jwtPayload, '1d');
-      const refresh_token = await this.generateJWT(jwtPayload, '7d');
+      const access_token = await this.generateJWT(
+        jwtPayload,
+        '1d',
+        jwt_config.access_token_secret,
+      );
+      const refresh_token = await this.generateJWT(
+        jwtPayload,
+        '7d',
+        jwt_config.refresh_token_secret,
+      );
 
       await this.authRepository.update(
         { id: checkUserExists.id },
@@ -99,5 +116,57 @@ export class AuthService extends BaseResponse {
         HttpStatus.UNPROCESSABLE_ENTITY,
       );
     }
+  }
+
+  async refreshToken(id: number, token: string): Promise<ResponseSuccess> {
+    const checkUserExists = await this.authRepository.findOne({
+      where: {
+        id: id,
+        refresh_token: token,
+      },
+      select: {
+        id: true,
+        nama: true,
+        email: true,
+        password: true,
+        refresh_token: true,
+      },
+    });
+
+    console.log('user', checkUserExists);
+    if (checkUserExists === null) {
+      throw new UnauthorizedException();
+    }
+
+    const jwtPayload: jwtPayload = {
+      id: checkUserExists.id,
+      nama: checkUserExists.nama,
+      email: checkUserExists.email,
+      role: '',
+      avatar: '',
+    };
+
+    const access_token = await this.generateJWT(
+      jwtPayload,
+      '1d',
+      jwt_config.access_token_secret,
+    );
+
+    const refresh_token = await this.generateJWT(
+      jwtPayload,
+      '7d',
+      jwt_config.refresh_token_secret,
+    );
+
+    await this.authRepository.save({
+      refresh_token: refresh_token,
+      id: checkUserExists.id,
+    });
+
+    return this._success('Success', {
+      ...checkUserExists,
+      access_token: access_token,
+      refresh_token: refresh_token,
+    });
   }
 }

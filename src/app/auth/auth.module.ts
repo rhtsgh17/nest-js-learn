@@ -5,8 +5,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './auth.entity';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { jwt_config } from 'src/config/jwt.config';
-
+import { JwtAccessTokenStrategy } from './jwtAccessTokenstrategi';
+import { JwtRefreshTokenStrategy } from './jwtRefreshTokenstrategi';
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
@@ -15,14 +17,9 @@ import { jwt_config } from 'src/config/jwt.config';
       property: 'user',
       session: false,
     }),
-    JwtModule.register({
-      secret: jwt_config.secret,
-      signOptions: {
-        expiresIn: jwt_config.expired,
-      },
-    }),
+    JwtModule.register({}),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, JwtAccessTokenStrategy, JwtRefreshTokenStrategy],
 })
 export class AuthModule {}
