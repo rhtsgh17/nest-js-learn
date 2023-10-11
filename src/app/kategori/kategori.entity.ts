@@ -13,6 +13,8 @@ export class Kategori extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Column()
+  nama: string;
   @Column({ nullable: false })
   nama_kategori: string;
 
